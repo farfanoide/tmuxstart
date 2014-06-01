@@ -56,8 +56,8 @@ _delete_session_file() {
         [[ $confirm =~ 'y' ]] && rm -v $session_file && exit 0
     else
         echo "Session file for \"${OPTARG}\" not found."
-        exit 1
     fi
+    exit 1
 }
 
 _link_session_file() {
