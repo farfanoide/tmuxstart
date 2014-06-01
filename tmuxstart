@@ -17,6 +17,7 @@ _usage() {
     echo -e "${ts_name} -h              -- ${Y} Print help menu ${reset}"
     echo -e "${ts_name} -l              -- ${Y} List all available session files ${reset}"
     echo -e "${ts_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
+    echo -e "${ts_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
     echo -e "${ts_name} -d session_name -- ${Y} Delete session file ${reset}"
 }
 
