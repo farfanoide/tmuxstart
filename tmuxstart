@@ -73,6 +73,9 @@ _list_session_files() {
         if tmux has-session -t $session 2> /dev/null ; then
             session="${session} ${G}(running)${reset}"
         fi
+        if [ -h "$session_dir/$session" ] ; then
+            session="${session} (local)"
+        fi
         echo -e $session
     done
 }
