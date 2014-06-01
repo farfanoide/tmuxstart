@@ -35,9 +35,9 @@ new_window\n
         # EDITOR not explicitly set or uses vim
         # create a buffer with dummy content in $TMUXSTART_DIR
         if [[ -z $EDITOR || $EDITOR =~ 'vi' ]] ; then
-            echo "${session_example}" | ${EDITOR:-vi} - +"file ${session_file}"
+            echo -e "${session_example}" | ${EDITOR:-vi} - +"file ${session_file}"
         else
-            echo "${session_example}" > $session_file;
+            echo -e "${session_example}" > $session_file;
             $EDITOR $session_file
         fi
     else
