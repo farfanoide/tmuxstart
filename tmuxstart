@@ -25,11 +25,11 @@ _usage() {
 _open_session_file() {
     local session_file session_example
     # TODO: add option to select example file
-    session_example="
-    # Make an htop window make a regular shell window\n
-    new_session -n htop htop\n
-    new_window\n
-    "
+session_example="
+# Make an htop window make a regular shell window\n
+new_session -n htop htop\n
+new_window\n
+"
     session_file="${session_dir}/${OPTARG}"
     if [ ! -f $session_file ]; then
         # EDITOR not explicitly set or uses vim
@@ -52,9 +52,10 @@ _delete_session_file() {
     if [ -f $session_file ]; then
         echo "Are you sure you want to remove \"${OPTARG}\"? [y/N]"
         read confirm
-        [[ $confirm =~ 'y' ]] && rm -v $session_file
+        [[ $confirm =~ 'y' ]] && rm -v $session_file && exit 0
     else
         echo "Session file for \"${OPTARG}\" not found."
+        exit 1
     fi
 }
 
@@ -82,6 +83,9 @@ while getopts ':hlc:o:d:' option; do
             _usage ; exit 0 ;;
         c)
             _link_session_file
+            ;;
+        d)
+            _delete_session_file
             ;;
         l)
             _list_session_files ; exit 0 ;;
