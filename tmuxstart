@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-sessiondir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
+session_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
+
+# colors
+reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m';
 
 # local functions
 
@@ -10,10 +13,11 @@ _usage() {
     ts_name=$(basename $0)
     echo "${ts_name} options:"
     echo "=================="
-    echo "${ts_name} tmux-session    -- Start/Attach session";
-    echo "${ts_name} -h              -- Print help menu"
-    echo "${ts_name} -l              -- List all available session files"
-    echo "${ts_name} -o session_name -- Edit/Create session file "
+    echo -e "${ts_name} tmux-session    -- ${Y} Start/Attach session ${reset}"
+    echo -e "${ts_name} -h              -- ${Y} Print help menu ${reset}"
+    echo -e "${ts_name} -l              -- ${Y} List all available session files ${reset}"
+    echo -e "${ts_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
+    echo -e "${ts_name} -d session_name -- ${Y} Delete session file ${reset}"
 }
 
 [ $# -lt 1 ] && _usage && exit 1
@@ -26,12 +30,11 @@ _open_session_file() {
     new_session -n htop htop\n
     new_window\n
     "
-    session_file="${sessiondir}/${OPTARG}"
-
+    session_file="${session_dir}/${OPTARG}"
     if [ ! -f $session_file ]; then
         # EDITOR not explicitly set or uses vim
-        if [ -z "$EDITOR" -o "$EDITOR" = 'vi' -o "$EDITOR" = 'vim' ]; then
-            # create a buffer with dummy content in $TMUXSTART_DIR
+        # create a buffer with dummy content in $TMUXSTART_DIR
+        if [[ -z $EDITOR || $EDITOR =~ 'vi' ]] ; then
             echo "${session_example}" | ${EDITOR:-vi} - +"file ${session_file}"
         else
             echo "${session_example}" > $session_file;
@@ -42,20 +45,48 @@ _open_session_file() {
     fi
 }
 
-_list_session_files(){
-    \ls  $sessiondir ; exit 0
+_delete_session_file() {
+    local session_file confirm
+
+    session_file="${session_dir}/${OPTARG}"
+    if [ -f $session_file ]; then
+        echo "Are you sure you want to remove \"${OPTARG}\"? [y/N]"
+        read confirm
+        [[ $confirm =~ 'y' ]] && rm -v $session_file
+    else
+        echo "Session file for \"${OPTARG}\" not found."
+    fi
+}
+
+_link_session_file() {
+    [ -f "./$OPTARG" -a ! -f "${session_dir}/${OPTARG}" ] && ln -s "$PWD/$OPTARG" $session_dir && exit 0;
+    exit 1
+}
+
+_list_session_files() {
+    local sessions session
+
+    sessions=$(\ls $session_dir)
+    for session in ${sessions[@]}; do
+        if tmux has-session -t $session 2> /dev/null ; then
+            session="${session} ${G}(running)${reset}"
+        fi
+        echo -e $session
+    done
 }
 
 # arguments parsing loop
-while getopts ':hlo:' option; do
+while getopts ':hlc:o:d:' option; do
     case "${option}" in
         h)
             _usage ; exit 0 ;;
+        c)
+            _link_session_file
+            ;;
         l)
-            _list_session_files ;;
+            _list_session_files ; exit 0 ;;
         o)
-            _open_session_file
-            exit 0 ;;
+            _open_session_file ; exit 0 ;;
         :)
             echo "Option -$OPTARG requires an argument."
             _usage ; exit 1 ;;
@@ -89,10 +120,16 @@ session=$1
 TMUX_OLD=$TMUX
 TMUX=
 if ! tmux has-session -t $session ; then
-    if [ -f "$sessiondir/$1" ] ; then
-        . "$sessiondir/$1"
+    if [ -f "./$session" ]; then
+        . "./$session"
     else
-        tmux new-session -d -s $session
+        if [ -f "$session_dir/$session" ] ; then
+            cd $session_dir
+            [ -h "./$session" ] && cd $(dirname $(readlink "$session"))
+            . "./$session"
+        else
+            tmux new-session -d -s $session
+        fi
     fi
 fi
 if [ "$TMUX_OLD" = "" ]; then
