@@ -127,7 +127,7 @@ swap() { tmux swap-pane -t $session:"$@"; }
 session=$1
 TMUX_OLD=$TMUX
 TMUX=
-if ! tmux has-session -t $session ; then
+if ! tmux has-session -t $session 2> /dev/null ; then
     if [ -f "./$session" ]; then
         . "./$session"
     else
