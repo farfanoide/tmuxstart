@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-session_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
+sessions_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
 
 # colors
 reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m'; R='\e[0;31m'
@@ -31,7 +31,7 @@ session_example="
 new_session -n htop htop\n
 new_window\n
 "
-    session_file="${session_dir}/${OPTARG}"
+    session_file="${sessions_dir}/${OPTARG}"
     if [ ! -f $session_file ]; then
         # EDITOR not explicitly set or uses vim
         # create a buffer with dummy content in $TMUXSTART_DIR
@@ -49,7 +49,7 @@ new_window\n
 _delete_session_file() {
     local session_file confirm
 
-    session_file="${session_dir}/${OPTARG}"
+    session_file="${sessions_dir}/${OPTARG}"
     if [ -f $session_file ]; then
         echo -e "${R}Are you sure you want to remove \"${OPTARG}\"? [y/N]${reset}"
         read confirm
@@ -61,27 +61,31 @@ _delete_session_file() {
 }
 
 _link_session_file() {
-    [ -f "./$OPTARG" -a ! -f "${session_dir}/${OPTARG}" ] && ln -s "$PWD/$OPTARG" $session_dir && exit 0;
+    [ -f "./$OPTARG" -a ! -f "${sessions_dir}/${OPTARG}" ] && ln -s "$PWD/$OPTARG" $sessions_dir && exit 0;
     exit 1
 }
 
 _list_session_files() {
     local sessions session
 
-    sessions=$(\ls $session_dir)
+    sessions=$(\ls $sessions_dir)
     for session in ${sessions[@]}; do
         if tmux has-session -t $session 2> /dev/null ; then
             session="${session} ${G}(running)${reset}"
         fi
-        if [ -h "$session_dir/$session" ] ; then
+        if [ -h "$sessions_dir/$session" ] ; then
             session="${session} (local)"
         fi
         echo -e $session
     done
 }
 
+# long flags with no hyphens
+[ $1 == 'list' -o $1 == 'ls' ] && _list_session_files && exit 0 ;
+[ $1 == 'help' ] && _usage && exit 0 ;
+
 # arguments parsing loop
-while getopts ':hlc:o:d:' option; do
+while getopts ':hlc:o:d:-' option; do
     case "${option}" in
         h)
             _usage ; exit 0 ;;
@@ -95,6 +99,13 @@ while getopts ':hlc:o:d:' option; do
             _list_session_files ; exit 0 ;;
         o)
             _open_session_file ; exit 0 ;;
+        -)
+            case "$OPTARG" in
+                -list)
+                    _list_session_files ; exit 0 ;;
+                -help)
+                    _usage ; exit 0 ;;
+            esac ;;
         :)
             echo "Option -$OPTARG requires an argument."
             _usage ; exit 1 ;;
@@ -131,8 +142,8 @@ if ! tmux has-session -t $session 2> /dev/null ; then
     if [ -f "./$session" ]; then
         . "./$session"
     else
-        if [ -f "$session_dir/$session" ] ; then
-            cd $session_dir
+        if [ -f "$sessions_dir/$session" ] ; then
+            cd $sessions_dir
             [ -h "./$session" ] && cd $(dirname $(readlink "$session"))
             . "./$session"
         else
