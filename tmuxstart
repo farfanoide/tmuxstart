@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-sessions_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
+scpt_name=$(basename $0)
+sessions_dir=${TMUXSTART_DIR:-$HOME/.$scpt_name}
 
 # colors
 reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m'; R='\e[0;31m'
@@ -9,16 +10,14 @@ reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m'; R='\e[0;31m'
 
 # Print _usage information if there's not enough arguments
 _usage() {
-    local ts_name
-    ts_name=$(basename $0)
-    echo "${ts_name} options:"
+    echo "${scpt_name} options:"
     echo "=================="
-    echo -e "${ts_name} tmux-session    -- ${Y} Start/Attach session ${reset}"
-    echo -e "${ts_name} -h              -- ${Y} Print help menu ${reset}"
-    echo -e "${ts_name} -l              -- ${Y} List all available session files ${reset}"
-    echo -e "${ts_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
-    echo -e "${ts_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
-    echo -e "${ts_name} -d session_name -- ${Y} Delete session file ${reset}"
+    echo -e "${scpt_name} tmux-session    -- ${Y} Start/Attach session ${reset}"
+    echo -e "${scpt_name} -h              -- ${Y} Print help menu ${reset}"
+    echo -e "${scpt_name} -l              -- ${Y} List all available session files ${reset}"
+    echo -e "${scpt_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
+    echo -e "${scpt_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
+    echo -e "${scpt_name} -d session_name -- ${Y} Delete session file ${reset}"
 }
 
 [ $# -lt 1 ] && _usage && exit 1
@@ -68,19 +67,28 @@ _link_session_file() {
 _list_session_files() {
     local sessions session session_files
     sessions=($(tmux list-sessions -F '#S'))
-    session_files=$(\ls $sessions_dir)
-    [ ${#session_files[*]} -ge 1 ] && echo -e "${Y}$(basename $0) sessions:${reset}"
-    for session in ${session_files[@]}; do
-        sessions=(${sessions[@]//*$session*})
-        if tmux has-session -t $session 2> /dev/null ; then
-            session="${session} ${G}(running)${reset}"
-        fi
-        if [ -h "$session_files_dir/$session" ] ; then
-            session="${session} (local)"
-        fi
-        echo -e $session
-    done
-    [ ${#sessions[*]} -ge 1 ] && echo -e "\n${Y}Other running sessions:${reset}" &&  echo ${sessions[*]}
+    session_files=($(\ls $sessions_dir))
+    if [ ${#session_files[*]} -ge 1 ]; then
+        echo -e "${Y}$scpt_name sessions:${reset}"
+        for session in ${session_files[@]}; do
+            sessions=(${sessions[@]//*$session*})
+            if tmux has-session -t $session 2> /dev/null ; then
+                session="${session} ${G}(running)${reset}"
+            fi
+            if [ -h "$sessions_dir/$session" ] ; then
+                session="${session} (local)"
+            fi
+            echo -e $session
+        done
+    else
+        echo -e "${R}No session files found."
+    fi
+    if [ ${#sessions[*]} -ge 1 ]; then
+        echo -e "\n${Y}Other running sessions:${reset}"
+        for session in ${sessions[*]}; do
+            echo $session
+        done
+    fi
 }
 
 # long flags with no hyphens
@@ -93,11 +101,9 @@ while getopts ':hlc:o:d:-' option; do
         h)
             _usage ; exit 0 ;;
         c)
-            _link_session_file
-            ;;
+            _link_session_file ;;
         d)
-            _delete_session_file
-            ;;
+            _delete_session_file ;;
         l)
             _list_session_files ; exit 0 ;;
         o)
