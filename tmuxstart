@@ -66,18 +66,21 @@ _link_session_file() {
 }
 
 _list_session_files() {
-    local sessions session
-
-    sessions=$(\ls $sessions_dir)
-    for session in ${sessions[@]}; do
+    local sessions session session_files
+    sessions=($(tmux list-sessions -F '#S'))
+    session_files=$(\ls $sessions_dir)
+    [ ${#session_files[*]} -ge 1 ] && echo -e "${Y}$(basename $0) sessions:${reset}"
+    for session in ${session_files[@]}; do
+        sessions=(${sessions[@]//*$session*})
         if tmux has-session -t $session 2> /dev/null ; then
             session="${session} ${G}(running)${reset}"
         fi
-        if [ -h "$sessions_dir/$session" ] ; then
+        if [ -h "$session_files_dir/$session" ] ; then
             session="${session} (local)"
         fi
         echo -e $session
     done
+    [ ${#sessions[*]} -ge 1 ] && echo -e "\n${Y}Other running sessions:${reset}" &&  echo ${sessions[*]}
 }
 
 # long flags with no hyphens
