@@ -4,7 +4,7 @@ scpt_name=$(basename $0)
 sessions_dir=${TMUXSTART_DIR:-$HOME/.$scpt_name}
 
 # colors
-reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m'; R='\e[0;31m'
+reset='\033[0m'; G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'
 
 if ! type tmux > /dev/null; then echo -e  "${R} tmux not found or not in your PATH${reset}"; fi
 # local functions
