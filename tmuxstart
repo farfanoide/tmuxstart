@@ -6,6 +6,7 @@ sessions_dir=${TMUXSTART_DIR:-$HOME/.$scpt_name}
 # colors
 reset='\e[0m'; G='\e[0;32m'; Y='\e[0;33m'; R='\e[0;31m'
 
+if ! type tmux > /dev/null; then echo -e  "${R} tmux not found or not in your PATH${reset}"; fi
 # local functions
 
 # Print _usage information if there's not enough arguments
@@ -60,15 +61,20 @@ _delete_session_file() {
 }
 
 _link_session_file() {
-    [ -f "./$OPTARG" -a ! -f "${sessions_dir}/${OPTARG}" ] && ln -s "$PWD/$OPTARG" $sessions_dir && exit 0;
+    if [ -f "./$OPTARG" -a ! -f "${sessions_dir}/${OPTARG}" ]; then
+       ln -s "$PWD/$OPTARG" $sessions_dir && exit 0;
+    fi
     exit 1
 }
 
 _list_session_files() {
     local sessions session session_files
-    sessions=($(tmux list-sessions -F '#S'))
+
+    sessions=($(tmux list-sessions -F '#S' 2> /dev/null))
     session_files=($(\ls $sessions_dir))
+
     if [ ${#session_files[*]} -ge 1 ]; then
+
         echo -e "${Y}$scpt_name sessions:${reset}"
         for session in ${session_files[@]}; do
             sessions=(${sessions[@]//*$session*})
@@ -83,6 +89,7 @@ _list_session_files() {
     else
         echo -e "${R}No session files found."
     fi
+
     if [ ${#sessions[*]} -ge 1 ]; then
         echo -e "\n${Y}Other running sessions:${reset}"
         for session in ${sessions[*]}; do
