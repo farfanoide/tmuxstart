@@ -27,9 +27,13 @@ done
 
 _arguments -s \
     '-h::Show help menu'\
+    '--help::Show help menu'\
     '-l::List all available session files'\
+    '--list::List all available session files'\
     '-c:Copy local session file to global directory:_files ./*'\
     '-o:Edit/Create session file:($session_files)'\
     '-d:Delete session file:($session_files)'\
+    '-v:Print version number'\
+    '--version:Print version number'\
     '*:Start/Attach session:($session_files $running_sessions)'
 
