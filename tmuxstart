@@ -19,9 +19,16 @@ _usage() {
     echo -e "${scpt_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
     echo -e "${scpt_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
     echo -e "${scpt_name} -d session_name -- ${Y} Delete session file ${reset}"
+    echo -e "${scpt_name} -v              -- ${Y} Print ${scpt_name} version number ${reset}"
 }
 
 [ $# -lt 1 ] && _usage && exit 1
+
+_print_version() {
+    local version
+    version='[ version number here ]'
+    echo "${scpt_name} ${version}"
+}
 
 _open_session_file() {
     local session_file session_example
@@ -103,7 +110,7 @@ _list_session_files() {
 [ $1 == 'help' ] && _usage && exit 0 ;
 
 # arguments parsing loop
-while getopts ':hlc:o:d:-' option; do
+while getopts ':hlvc:o:d:-' option; do
     case "${option}" in
         h)
             _usage ; exit 0 ;;
@@ -115,6 +122,8 @@ while getopts ':hlc:o:d:-' option; do
             _list_session_files ; exit 0 ;;
         o)
             _open_session_file ; exit 0 ;;
+        v)
+            _print_version ; exit 0 ;;
         -)
             case "$OPTARG" in
                 -list)
