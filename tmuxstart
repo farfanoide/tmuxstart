@@ -14,12 +14,12 @@ _usage() {
     echo "${scpt_name} options:"
     echo "=================="
     echo -e "${scpt_name} tmux-session    -- ${Y} Start/Attach session ${reset}"
-    echo -e "${scpt_name} -h              -- ${Y} Print help menu ${reset}"
-    echo -e "${scpt_name} -l              -- ${Y} List all available session files ${reset}"
+    echo -e "${scpt_name} -h|--help|help  -- ${Y} Print help menu ${reset}"
+    echo -e "${scpt_name} -l|--list|ls    -- ${Y} List all available session files ${reset}"
     echo -e "${scpt_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
     echo -e "${scpt_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
     echo -e "${scpt_name} -d session_name -- ${Y} Delete session file ${reset}"
-    echo -e "${scpt_name} -v              -- ${Y} Print ${scpt_name} version number ${reset}"
+    echo -e "${scpt_name} -v|--version    -- ${Y} Print ${scpt_name} version number ${reset}"
 }
 
 [ $# -lt 1 ] && _usage && exit 1
@@ -130,6 +130,8 @@ while getopts ':hlvc:o:d:-' option; do
                     _list_session_files ; exit 0 ;;
                 -help)
                     _usage ; exit 0 ;;
+                -version)
+                    _print_version ; exit 0 ;;
             esac ;;
         :)
             echo "Option -$OPTARG requires an argument."
