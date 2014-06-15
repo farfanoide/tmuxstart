@@ -1,64 +1,97 @@
+#!/bin/sh
 #!/usr/bin/env bash
 
-scpt_name=$(basename $0)
-sessions_dir=${TMUXSTART_DIR:-$HOME/.$scpt_name}
+SCPT_NAME=$(basename $0)
+SESSIONS_DIR=${TMUXSTART_DIR:-$HOME/.$SCPT_NAME}
 
 # colors
-reset='\033[0m'; G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'
+RESET='\033[0m'; G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'
 
-if ! type tmux > /dev/null; then echo -e  "${R} tmux not found or not in your PATH${reset}"; fi
+
+if ! type tmux > /dev/null; then echo -e  "${R} tmux not found or not in your PATH${RESET}"; fi
 # local functions
 
 # Print _usage information if there's not enough arguments
 _usage() {
-    echo "${scpt_name} options:"
+    echo "Usage: ${SCPT_NAME} session_name       -- ${Y} Start/Attach session ${RESET}\n"
+    echo "${SCPT_NAME} options:"
     echo "=================="
-    echo -e "${scpt_name} tmux-session    -- ${Y} Start/Attach session ${reset}"
-    echo -e "${scpt_name} -h|--help|help  -- ${Y} Print help menu ${reset}"
-    echo -e "${scpt_name} -l|--list|ls    -- ${Y} List all available session files ${reset}"
-    echo -e "${scpt_name} -o session_name -- ${Y} Edit/Create session file ${reset}"
-    echo -e "${scpt_name} -c session_name -- ${Y} Copy session file to global directory ${reset}"
-    echo -e "${scpt_name} -d session_name -- ${Y} Delete session file ${reset}"
-    echo -e "${scpt_name} -v|--version    -- ${Y} Print ${scpt_name} version number ${reset}"
+    echo " -h|--help|help                           -- ${Y} Print help menu ${RESET}"
+    echo " --list|ls                                -- ${Y} List all available session files ${RESET}"
+    echo " -o session_name [-l]                     -- ${Y} Edit [local] session file ${RESET}"
+    echo " -n session_name [-l] [-e example_file]   -- ${Y} Edit [local] session file ${RESET}"
+    echo " -c session_name                          -- ${Y} Copy session file to global directory ${RESET}"
+    echo " -d session_name                          -- ${Y} Delete session file ${RESET}"
+    echo " -v|--version                             -- ${Y} Print ${SCPT_NAME} version number ${RESET}"
 }
 
 [ $# -lt 1 ] && _usage && exit 1
 
 _print_version() {
     local version
-    version='[ version number here ]'
-    echo "${scpt_name} ${version}"
+    version='[ 0.4.0-alpha ]'
+    echo "${SCPT_NAME} ${G}${version}${RESET}"
+}
+
+_echo_example_file() {
+    local basic_example
+basic_example="
+# General session example
+new_session -n 'General'
+
+# windows:
+general=1; downloads=2;
+
+send_line 'General' 'ls'
+
+new_window -n 'Downloads'
+send_line 'Downloads' 'cd ~/Downloads && ls'
+"
+    if [ -f "$TMUXSTART_DIR/examples/$1" ]; then
+        cat "$TMUXSTART_DIR/examples/$1"
+    else
+        echo $basic_example
+    fi
+}
+_new_session_file() {
+    local session_file session_example dir
+    if [ -z $LOCAL_SESSION ]; then dir=$SESSIONS_DIR; else dir=$PWD; fi
+    session_file="${dir}/${NEW_SESSION_FILE}"
+
+    echo hasta aca llegamos
+    [ -z "$EXAMPLE_FILE" ] && echo $EXAMPLE_FILE
+    [ ! -z $EXAMPLE_FILE ] && session_example=$(_echo_example_file $EXAMPLE_FILE)
+    # EDITOR not explicitly set or uses vim
+    # create a buffer with dummy content in $TMUXSTART_DIR
+    if [[ -z $EDITOR || $EDITOR =~ 'vi' ]] ; then
+        echo "${session_example}" | ${EDITOR:-vi} - "+file ${session_file}"
+    else
+        echo "${session_example}" > $session_file && $EDITOR $session_file
+    fi
+
 }
 
 _open_session_file() {
-    local session_file session_example
-    # TODO: add option to select example file
-session_example="
-# Make an htop window make a regular shell window\n
-new_session -n htop htop\n
-new_window\n
-"
-    session_file="${sessions_dir}/${OPTARG}"
-    if [ ! -f $session_file ]; then
-        # EDITOR not explicitly set or uses vim
-        # create a buffer with dummy content in $TMUXSTART_DIR
-        if [[ -z $EDITOR || $EDITOR =~ 'vi' ]] ; then
-            echo -e "${session_example}" | ${EDITOR:-vi} - +"file ${session_file}"
-        else
-            echo -e "${session_example}" > $session_file;
-            $EDITOR $session_file
-        fi
-    else
+    local session_file dir
+    echo $LOCAL_SESSION
+
+
+    if [ -z $LOCAL_SESSION ]; then dir=$SESSIONS_DIR; else dir=$PWD; fi
+    session_file="${dir}/${OPTARG}"
+
+    if [ -f $session_file ]; then
         ${EDITOR:-vi} $session_file
+    else
+        echo "${R}Session file not found.${RESET}"
     fi
 }
 
 _delete_session_file() {
     local session_file confirm
 
-    session_file="${sessions_dir}/${OPTARG}"
+    session_file="${SESSIONS_DIR}/${OPTARG}"
     if [ -f $session_file ]; then
-        echo -e "${R}Are you sure you want to remove \"${OPTARG}\"? [y/N]${reset}"
+        echo -e "${R}Are you sure you want to remove \"${OPTARG}\"? [y/N]${RESET}"
         read confirm
         [[ $confirm =~ 'y' ]] && rm -v $session_file && exit 0
     else
@@ -68,8 +101,8 @@ _delete_session_file() {
 }
 
 _link_session_file() {
-    if [ -f "./$OPTARG" -a ! -f "${sessions_dir}/${OPTARG}" ]; then
-       ln -s "$PWD/$OPTARG" $sessions_dir && exit 0;
+    if [ -f "./$OPTARG" -a ! -f "${SESSIONS_DIR}/${OPTARG}" ]; then
+        ln -s "$PWD/$OPTARG" $SESSIONS_DIR && exit 0;
     fi
     exit 1
 }
@@ -77,28 +110,28 @@ _link_session_file() {
 _list_session_files() {
     local sessions session session_files
 
-    sessions=($(tmux list-sessions -F '#S' 2> /dev/null))
-    session_files=($(\ls $sessions_dir))
+    sessions=($(tmux list-sessions -F '#S' 2> /dev/null))   # running sessions
+    session_files=($(\ls $SESSIONS_DIR))                    # tmuxstart sessions
 
     if [ ${#session_files[*]} -ge 1 ]; then
-
-        echo -e "${Y}$scpt_name sessions:${reset}"
+        echo "${Y}${SCPT_NAME} sessions:${RESET}"
         for session in ${session_files[@]}; do
+            # remove session_file from
             sessions=(${sessions[@]//*$session*})
             if tmux has-session -t $session 2> /dev/null ; then
-                session="${session} ${G}(running)${reset}"
+                session="${session} ${G}(running)${RESET}"
             fi
-            if [ -h "$sessions_dir/$session" ] ; then
+            if [ -h "$SESSIONS_DIR/$session" ] ; then
                 session="${session} (local)"
             fi
-            echo -e $session
+            echo $session
         done
     else
-        echo -e "${R}No session files found."
+        echo "${R}No session files found."
     fi
 
     if [ ${#sessions[*]} -ge 1 ]; then
-        echo -e "\n${Y}Other running sessions:${reset}"
+        echo "\n${Y}Other running sessions:${RESET}"
         for session in ${sessions[*]}; do
             echo $session
         done
@@ -108,9 +141,10 @@ _list_session_files() {
 # long flags with no hyphens
 [ $1 == 'list' -o $1 == 'ls' ] && _list_session_files && exit 0 ;
 [ $1 == 'help' ] && _usage && exit 0 ;
+[ $1 == 'version' ] && _print_version && exit 0 ;
 
 # arguments parsing loop
-while getopts ':hlvc:o:d:-' option; do
+while getopts ':hle:n:vc:o:d:-' option; do
     case "${option}" in
         h)
             _usage ; exit 0 ;;
@@ -118,8 +152,12 @@ while getopts ':hlvc:o:d:-' option; do
             _link_session_file ;;
         d)
             _delete_session_file ;;
+        e)
+            EXAMPLE_FILE=$OPTARG ;;
+        n)
+            NEW_SESSION_FILE=$OPTARG ;;
         l)
-            _list_session_files ; exit 0 ;;
+            LOCAL_SESSION=1 ;;
         o)
             _open_session_file ; exit 0 ;;
         v)
@@ -141,6 +179,8 @@ while getopts ':hlvc:o:d:-' option; do
             _usage ; exit 1 ;;
     esac
 done
+
+[ ! -z $NEW_SESSION_FILE ] && _new_session_file && exit 0
 
 # Some helper functions for simpler session files
 new_session() {
@@ -169,8 +209,8 @@ if ! tmux has-session -t $session 2> /dev/null ; then
     if [ -f "./$session" ]; then
         . "./$session"
     else
-        if [ -f "$sessions_dir/$session" ] ; then
-            cd $sessions_dir
+        if [ -f "$SESSIONS_DIR/$session" ] ; then
+            cd $SESSIONS_DIR
             [ -h "./$session" ] && cd $(dirname $(readlink "$session"))
             . "./$session"
         else
