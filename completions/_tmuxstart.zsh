@@ -12,16 +12,20 @@
 #  * Farfanoide (https://github.com/farfanoide)
 #
 # ------------------------------------------------------------------------------
-local sessions_dir running_sessions session_files
+local sessions_dir running_sessions global_sessions
 
 sessions_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
 
-session_files=($(\ls $sessions_dir))
-# all_sessions=$session_files
+global_sessions=($(\ls "$sessions_dir/globals"))
+local_sessions=($(\ls "$sessions_dir/locals"))
+# all_sessions=$global_sessions
 
 running_sessions=($(tmux list-sessions -F '#S' 2> /dev/null))
 
-for session in ${session_files[@]}; do
+for session in ${global_sessions[@]}; do
+    running_sessions=(${running_sessions[@]//*$session*})
+done
+for session in ${local_sessions[@]}; do
     running_sessions=(${running_sessions[@]//*$session*})
 done
 
@@ -31,9 +35,9 @@ _arguments -s \
     '-l::List all available session files'\
     '--list::List all available session files'\
     '-c:Copy local session file to global directory:_files ./*'\
-    '-o:Edit/Create session file:($session_files)'\
-    '-d:Delete session file:($session_files)'\
+    '-o:Edit/Create session file:($global_sessions $local_sessions)'\
+    '-d:Delete session file:($global_sessions $local_sessions)'\
     '-v:Print version number'\
     '--version:Print version number'\
-    '*:Start/Attach session:($session_files $running_sessions)'
+    '*:Start/Attach session:($global_sessions $running_sessions $local_sessions)'
 
