@@ -18,6 +18,7 @@ sessions_dir=${TMUXSTART_DIR:-$HOME/.tmuxstart}
 
 global_sessions=($(\ls "$sessions_dir/globals"))
 local_sessions=($(\ls "$sessions_dir/locals"))
+example_sessions=($(\ls "$sessions_dir/examples"))
 # all_sessions=$global_sessions
 
 running_sessions=($(tmux list-sessions -F '#S' 2> /dev/null))
@@ -36,6 +37,7 @@ _arguments -s \
     '--list::List all available session files'\
     '-c:Copy local session file to global directory:_files ./*'\
     '-o:Edit/Create session file:($global_sessions $local_sessions)'\
+    '-e:Example file:($example_sessions)'\
     '-d:Delete session file:($global_sessions $local_sessions)'\
     '-v:Print version number'\
     '--version:Print version number'\
