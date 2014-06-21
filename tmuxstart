@@ -29,16 +29,49 @@ _usage() {
 
 [ $# -lt 1 ] && _usage && exit 1
 
-# long flags with no hyphens
-[ $1 == 'list' -o $1 == 'ls' ] && _list_session_files && exit 0 ;
-[ $1 == 'help' ] && _usage && exit 0 ;
-[ $1 == 'version' ] && _print_version && exit 0 ;
+
+_print_sessions_array() {
+    local sessions_array
+    sessions_array=$*
+    for session in ${sessions_array[*]}; do
+        # remove session_file from running_sessions array
+        sessions=(${sessions[*]//*$session*})
+        if tmux has-session -t "$session" 2> /dev/null ; then session="$session $G(running)$RESET" ; fi
+        echo " - $session"
+    done
+}
+
+_list_session_files() {
+    local sessions session global_sessions local_sessions
+    sessions=($(tmux list-sessions -F '#S' 2> /dev/null))   # running sessions
+    global_sessions=($(\ls "$SESSIONS_DIR/globals"))
+    local_sessions=($(\ls "$SESSIONS_DIR/locals"))
+
+    if [ ${#global_sessions[*]} -ge 1 -o ${#local_sessions[*]} -ge 1 ]; then
+        echo "$Y$SCPT_NAME global sessions:$RESET"
+        _print_sessions_array ${global_sessions[*]}
+        echo "$Y$SCPT_NAME local sessions:$RESET"
+        _print_sessions_array ${local_sessions[*]}
+    else
+        echo "${R}No session files found.$RESET"
+    fi
+
+    if [ ${#sessions[*]} -ge 1 ]; then
+        echo "${Y}Other running sessions:$RESET"
+        for session in ${sessions[*]}; do echo " - $session" ; done
+    fi
+}
 
 _print_version() {
     local version
     version='[ 0.4.0-alpha ]'
     echo "$SCPT_NAME ${G}${version}${RESET}"
 }
+
+# long flags with no hyphens
+[ $1 == 'list' -o $1 == 'ls' ] && _list_session_files && exit 0 ;
+[ $1 == 'help' ] && _usage && exit 0 ;
+[ $1 == 'version' ] && _print_version && exit 0 ;
 
 _echo_example_file() {
     if [ -f "$EXAMPLES_DIR/$1" ]; then
@@ -104,37 +137,6 @@ _link_session_file() {
     exit 1
 }
 
-_print_sessions_array() {
-    local sessions_array
-    sessions_array=$*
-    for session in ${sessions_array[*]}; do
-        # remove session_file from running_sessions array
-        sessions=(${sessions[*]//*$session*})
-        if tmux has-session -t "$session" 2> /dev/null ; then session="$session $G(running)$RESET" ; fi
-        echo " - $session"
-    done
-}
-
-_list_session_files() {
-    local sessions session global_sessions local_sessions
-    sessions=($(tmux list-sessions -F '#S' 2> /dev/null))   # running sessions
-    global_sessions=($(\ls "$SESSIONS_DIR/globals"))
-    local_sessions=($(\ls "$SESSIONS_DIR/locals"))
-
-    if [ ${#global_sessions[*]} -ge 1 -o ${#local_sessions[*]} -ge 1 ]; then
-        echo "$Y$SCPT_NAME global sessions:$RESET"
-        _print_sessions_array ${global_sessions[*]}
-        echo "$Y$SCPT_NAME local sessions:$RESET"
-        _print_sessions_array ${local_sessions[*]}
-    else
-        echo "${R}No session files found.$RESET"
-    fi
-
-    if [ ${#sessions[*]} -ge 1 ]; then
-        echo "${Y}Other running sessions:$RESET"
-        for session in ${sessions[*]}; do echo " - $session" ; done
-    fi
-}
 
 # arguments parsing loop
 while getopts ':hle:n:vc:o:d:-' option; do
